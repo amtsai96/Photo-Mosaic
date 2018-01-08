@@ -5,6 +5,7 @@ if sys_pf == 'darwin':
     import matplotlib
     matplotlib.use("TkAgg")
 
+from datalib import *
 import os
 from pylab import *
 import pickle
@@ -13,9 +14,12 @@ from PIL import ImageTk,Image
 import tkMessageBox
 import tkFileDialog
 from ttk import Frame, Button, Label, Style
+import csv
+import colorsys
 
-global imgs
+#global imgs
 global thumb
+global thumb_mosaic
 
 csvLoc = "./dataset/"
 imgLoc = "./dataset/img/"
@@ -47,12 +51,15 @@ class Window(Frame):
         self.thumb.grid(row=0, column=0, padx=720-img.size[0]/4, pady=5, sticky=W+E+N+S)
         self.thumb.configure(image = image)
         self.thumb.image = image
+        
+        self.thumb_mosaic = Label(self)
+        self.thumb_mosaic.grid(row=0, column=1, padx=720-img.size[0]/2, pady=5, sticky=W+E+N+S)
 
         
         # Mode
         mode = StringVar(self)
         mode.set('-- Select Mode --')
-        menu = OptionMenu(self, mode, 'Q1-Average_RGB','Q2-Average_HSV','Q3-Color_Histogram', 'Q4-Color_Layout')
+        menu = OptionMenu(self, mode, 'M1-Average_RGB','M2-Average_HSV','M3-Color_Histogram', 'M4-Color_Layout')
         menu.grid(row=6, column=0, padx=640, pady=5, sticky=W)
         
         # Image Partition Size
@@ -70,13 +77,7 @@ class Window(Frame):
         self.rowEntry.grid(row=7, column=0,sticky=W, padx=820)
         
         # Start Processing Mosaic
-        Button(self, text = "Start Processing Mosaic", command = lambda: startSearching(mode.get(),self.fileName.get())).grid(row=8, column=0, padx=630, pady=5, sticky=W)
-
-#        # Return Ranking List
-#        self.imgs = []
-#        for i in xrange(10):
-#            self.imgs.append(Label(self))
-#            self.imgs[i].grid(row = i / 5 + 4, column = i % 5 , padx=10, pady=20)
+        Button(self, text = "Start Processing Mosaic", command = lambda: startProcessing(mode.get(),self.fileName.get(),self.saveName.get(),int(self.rowEntry.get()),int(self.columnEntry.get()))).grid(row=8, column=0, padx=630, pady=5, sticky=W)
 
     def isValidate(self, action, index, value_if_allowed,prior_value, text, validation_type, trigger_type, widget_name):
         return True if text in '0123456789' else False
@@ -90,103 +91,120 @@ def openFile():
     app.thumb.configure(image = image)
     app.thumb.image = image
 
+def showImg(img):
+    Image.open(img).show()
+
 def saveFile():
     fileName = 'Mosaic.jpg'
     saveName = tkFileDialog.asksaveasfile(initialdir = "./",filetypes=[("Image","*.jpg")],initialfile=fileName)
     app.saveName.set(saveName.name)
 
+##################
+def avgRGB_CountDistance(query,base):
+    qData = convert(query,"Average_RGB")
+    minValue = ['',float("inf")] #fileName,distance
+    for row in xrange(0,len(base),4):
+        distance = 0
+        for i in xrange(1,4):
+            distance += pow(abs(float(qData[i-1]) - float(base[row+i][1])) ,2)
+        distance = sqrt(distance)
+        if distance < minValue[1]:
+            minValue = [base[row][0], distance]
+    return minValue
 
-#def Q1_CountDistance(query, base):
-#    minTotal = 0
-#    qTotal = 0
-#    bTotal = 0
-#    queryColor = query.histogram()
-#    baseColor = base.histogram()
-#    for i in xrange(0,len(baseColor)):
-#        q = queryColor[i]
-#        b = baseColor[i]
-#        minTotal += min(q,b)
-#        qTotal += q
-#        bTotal += b
-#    return 1 - float(minTotal / float(min(qTotal,bTotal)))
+def avgHSV_CountDistance(query,base):
+    qData = convert(query,"Average_HSV")
+    minValue = ['',float("inf")] #fileName,distance
+    for row in xrange(0,len(base),4):
+        distance = 0
+        for i in xrange(1,4):
+            distance += pow(abs(float(qData[i-1]) - float(base[row+i][1])) ,2)
+        distance = sqrt(distance)
+        if distance < minValue[1]:
+            minValue = [base[row][0], distance]
+    return minValue
 
-def colorLayout_CountDistance(query, base, weight):
-    #Eular Distance
-    dis = 0
-    for i in xrange(1,len(query)):
-        dis += weight[i-1] / 10 * pow(float(query[i]) - float(base[i]),2)
-    return sqrt(dis)
+def colorHistogram_CountDistance(query, base):
+    # H:[0,360] / S:[0,100] / V:[0,255]
+    qData = convert(query,"Color_Histogram")
+    minValue = ['',float("inf")] #fileName,distance
+    for row in xrange(0,len(base),4):
+        distance = 0
+        for i in xrange(1,4):
+            for j in xrange(1,len(base[0])):
+                sub = abs(float(qData[i-1][j]) - float(base[row+i][j]))
+                if i == 1: # H
+                    distance += pow( min(sub,360-sub) / 180.0 ,2)
+                elif i == 2: # S
+                    if j > 100: break
+                    distance += pow( sub / 100.0 ,2)
+                elif i == 3: # V
+                    if j > 255: break
+                    distance += pow( sub / 255.0 ,2)
+        distance = sqrt(distance)
+        if distance < minValue[1]:
+            minValue = [base[row][0], distance]
+    return minValue
+
+def colorLayout_CountDistance(query, base):
+    qData = convert(query,"Color_Layout")
+    
+#not yet
 
 
-def maxInList(list):
-    max = [0,0.0] #[index,value]
-    for l in list:
-        if l[1] > max[1]:
-            max = [list.index(l),l[1]]
-    return max[0]
-
-def minInList(list):
-    min = [0,float("inf")] #[index,value]
-    for l in list:
-        if l[1] < min[1]:
-            min = [list.index(l),l[1]]
-    return min[0]
-
-def startSearching(mode,fileName):
+def startProcessing(mode,fileName,saveName,row,column):
     query = Image.open(fileName)
-    path,dirs,dataset = os.walk(fileName[:-16]).next()
-    fileName = fileName[-16:]
-    #print fileName
-    res = []
+    width, height = query.size
+    csvName = ''
+    formula = ''
     if mode[1] == "-":
         return -1
+    elif mode[1] == "1":      #M1-Avg_RGB
+        csvName = 'AverageRGB.csv'
+        formula = avgRGB_CountDistance
+
+    elif mode[1] == "2":      #M2-Avg_HSV
+        csvName = 'AverageHSV.csv'
+        formula = avgHSV_CountDistance
     
-    if mode[1] == "1":      #Q1-Avg_RGB
-        print('1')
+    elif mode[1] == "3":      #M3-Color_Histogram
+        csvName = 'ColorHistogram.csv'
+        formula = colorHistogram_CountDistance
 
-    elif mode[1] == "2":      #Q2-Avg_HSV
-        print('2')
+    elif mode[1] == "4":    #M4-Color_Layout
+        csvName = 'ColorLayout.csv'
+        formula = colorLayout_CountDistance
 
-    
-    elif mode[1] == "3":      #Q3-Color_Histogram
-        print('3')
-#        res = [["",float("inf")] for i in xrange(10)] #[fileName,distance]
-#        for imgName in dataset:
-#            img = Image.open(path+'/'+imgName)
-#            distance = Q1_CountDistance(query,img)
-#            #print distance
-#            index = maxInList(res)
-#            if distance < res[index][1]:
-#                res[index] = [imgName,distance]
-#        res = sorted(res,key = lambda x: x[1])
+    with open(csvLoc + csvName, 'rb') as csvfile:
+        Reader = csv.reader(csvfile)
+        data = [row_ for row_ in Reader]
+        
+        output = Image.new('RGB',(width,height))
+        blockW = width / column
+        blockH = height / row
+        blockSize = (blockW, blockH)
+        blockBoundary = (0, 0, blockW, blockH)
+        for i in xrange(column):
+            for j in xrange(row):
+                imgCrop = query.crop(blockBoundary)
+                res = formula(imgCrop,data)
+                print (str(i+1) + ' x ' + str(j+1) + ' : ' + res[0] + ' , Distance = ' + str(res[1]))
+                imgNew = Image.open(imgLoc + res[0]).resize(blockSize)
+                output.paste(imgNew, blockBoundary)
+                # Update block boundary (blockW)
+                blockBoundary = (blockBoundary[0]+blockW, blockBoundary[1], blockBoundary[2]+blockW, blockBoundary[3])
+            
+            # Update block boundary (blockH)
+            blockBoundary = (blockBoundary[0], blockBoundary[1]+blockH, blockBoundary[2], blockBoundary[3]+blockH)
 
-    elif mode[1] == "4":    #Q4-Color_Layout
-        print('4')
-#        res = [["",float("inf")] for i in xrange(10)] #[fileName,distance]
-#        qIndex = int(fileName[7:-4]) * 4 #Query index
-#        with open('./dataset/Q2.csv', 'rb') as csvfile:
-#            Reader = csv.reader(csvfile)
-#            data = [row for row in Reader]
-#            for row in xrange(0,len(data),4):
-#                distance = 0
-#                for i in xrange(0,4):
-#                    distance += colorLayout_CountDistance(data[qIndex+i], data[row+i], [j for j in xrange(len(data[0])-1,0,-1)])
-#                index = maxInList(res)
-#                #print res[index][1]
-#                if distance < res[index][1]:
-#                    res[index] = [data[row][0],distance]
-#        res = sorted(res,key = lambda x: x[1])
+    output.save(saveName, "JPEG", quality=85, optimize=True, progressive=True)
 
-
-    print "#  Query: " + fileName + " / " + mode
-#    print res
-
-#    for i in xrange(10):
-#        imgName = path + res[i][0]
-#        image = Image.open(imgName)
-#        image = ImageTk.PhotoImage(image.resize((int(image.size[0]*0.85), int(image.size[1]*0.85)),Image.ANTIALIAS))
-#        app.imgs[i].configure(image = image)
-#        app.imgs[i].image = image
+    # Show saved photo
+#    showImg(saveName)
+    img = Image.open(saveName)
+    image = ImageTk.PhotoImage(img.resize((img.size[0]/2, img.size[1]/2),Image.ANTIALIAS))
+    app.thumb_mosaic.configure(image = image)
+    app.thumb_mosaic.image = image
 
 if __name__ == '__main__':
     root = Tk()
