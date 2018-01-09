@@ -37,22 +37,26 @@ class Window(Frame):
         
         # Open File
         self.fileName = StringVar(value = "./example.jpg")
-        Button(self, text = "-- Select File --", command = openFile).grid(row=2, column=0, padx=650, pady=5, sticky=W)
-        Label(self, textvariable = self.fileName).grid(row=3, column=0, columnspan=10, padx=600, pady=5, sticky=W+E+N+S)
+        Button(self, text = "-- Select File --", command = openFile).grid(row=2, column=0, padx=600, pady=5, sticky=W+N+S)
+        Label(self, textvariable = self.fileName).grid(row=3, column=0, columnspan=10, padx=700, pady=5, sticky=W+N+S)
         # Save File
         self.saveName = StringVar(value = "./example_Mosaic.jpg")
-        Button(self, text = "-- Save File To --", command = saveFile).grid(row=4, column=0, padx=650, pady=5, sticky=W)
-        Label(self, textvariable = self.saveName).grid(row=5, column=0, columnspan=10, padx=600, pady=5, sticky=W+E+N+S)
+        Button(self, text = "-- Save File To --", command = saveFile).grid(row=4, column=0,columnspan=10, padx=600, pady=5, sticky=W+N+S)
+        Label(self, textvariable = self.saveName).grid(row=5, column=0, columnspan=10, padx=700, pady=5, sticky=W+N+S)
 
         img = Image.open(self.fileName.get())
-        image = ImageTk.PhotoImage(img.resize((img.size[0]/2, img.size[1]/2),Image.ANTIALIAS))
+        image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
         self.thumb = Label(self)
-        self.thumb.grid(row=0, column=0, padx=720-img.size[0]/4, pady=5, sticky=W+E+N+S)
+        self.thumb.grid(row=0, column=0, padx=20, pady=5, sticky=W)
         self.thumb.configure(image = image)
         self.thumb.image = image
-        
+
+        img = Image.open(self.fileName.get())
+        image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
         self.thumb_mosaic = Label(self)
-        self.thumb_mosaic.grid(row=0, column=1, padx=10, pady=5, sticky=W+E+N+S)
+        self.thumb_mosaic.grid(row=0, column=0, padx=740, pady=5, sticky=W)
+        self.thumb_mosaic.configure(image = image)
+        self.thumb_mosaic.image = image
 
 
         # Mode
@@ -83,22 +87,24 @@ class Window(Frame):
 
 
 def openFile():
-    fileName = tkFileDialog.askopenfilename(initialdir = "./dataset/img/")
+    fileName = tkFileDialog.askopenfilename(initialdir = imgLoc)
     app.fileName.set(fileName)
-    image = Image.open(app.fileName.get())
-    image = ImageTk.PhotoImage(image.resize((image.size[0]/2, image.size[1]/2),Image.ANTIALIAS))
+    img = Image.open(app.fileName.get())
+    image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
     app.thumb.configure(image = image)
     app.thumb.image = image
+    app.thumb_mosaic.configure(image = image)
+    app.thumb_mosaic.image = image
 
-def showImg(img):
-    Image.open(img).show()
+#def showImg(img):
+#    Image.open(img).show()
 
 def saveFile():
     fileName = 'Mosaic.jpg'
     saveName = tkFileDialog.asksaveasfile(initialdir = "./",filetypes=[("Image","*.jpg")],initialfile=fileName)
     app.saveName.set(saveName.name)
 
-##################
+##################   Calculate Formulas   ##################
 def avgRGB_CountDistance(query,base):
     qData = convert(query,"Average_RGB")
     minValue = ['',float("inf")] #fileName,distance
@@ -201,19 +207,14 @@ def startProcessing(mode,fileName,saveName,row,column):
     output.save(saveName, "JPEG", quality=85, optimize=True, progressive=True)
 
     # Show saved photo
-    showImg(saveName)
-# The following code makes an attempt to put result img next to the original one
-# but seems not working yet
-
-#    img = Image.open(saveName)
-#    image = ImageTk.PhotoImage(img.resize((img.size[0]/2, img.size[1]/2),Image.ANTIALIAS))
-#    app.thumb_mosaic.configure(image = image)
-#    app.thumb_mosaic.image = image
+    # showImg(saveName)
+    img = Image.open(saveName)
+    image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
+    app.thumb_mosaic.configure(image = image)
+    app.thumb_mosaic.image = image
 
 if __name__ == '__main__':
     root = Tk()
     app = Window(root)
-    root.geometry("1920x1080")
+    root.geometry("1440x780")
     root.mainloop()
-
-  
