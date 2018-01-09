@@ -17,7 +17,6 @@ from ttk import Frame, Button, Label, Style
 import csv
 import colorsys
 
-#global imgs
 global thumb
 global thumb_mosaic
 
@@ -53,9 +52,9 @@ class Window(Frame):
         self.thumb.image = image
         
         self.thumb_mosaic = Label(self)
-        self.thumb_mosaic.grid(row=0, column=1, padx=720-img.size[0]/2, pady=5, sticky=W+E+N+S)
+        self.thumb_mosaic.grid(row=0, column=1, padx=10, pady=5, sticky=W+E+N+S)
 
-        
+
         # Mode
         mode = StringVar(self)
         mode.set('-- Select Mode --')
@@ -132,7 +131,7 @@ def colorHistogram_CountDistance(query, base):
         distance = 0
         for i in xrange(1,4):
             for j in xrange(1,len(base[0])):
-                sub = abs(float(qData[i-1][j]) - float(base[row+i][j]))
+                sub = abs(float(qData[i-1][j-1]) - float(base[row+i][j]))
                 if i == 1: # H
                     distance += pow( min(sub,360-sub) / 180.0 ,2)
                 elif i == 2: # S
@@ -147,10 +146,19 @@ def colorHistogram_CountDistance(query, base):
     return minValue
 
 def colorLayout_CountDistance(query, base):
+    # 8*8 = 64 blocks
     qData = convert(query,"Color_Layout")
-    
-#not yet
-
+    minValue = ['',float("inf")] #fileName,distance
+    for row in xrange(0,len(base),4):
+        distance = 0
+        for i in xrange(1,4):
+            blockDistance = 0
+            for j in xrange(1,65):
+                blockDistance += pow(abs(float(qData[i-1][j-1]) - float(base[row+i][j])) ,2)
+            distance += sqrt(blockDistance)
+        if distance < minValue[1]:
+            minValue = [base[row][0], distance]
+    return minValue
 
 def startProcessing(mode,fileName,saveName,row,column):
     query = Image.open(fileName)
@@ -162,15 +170,12 @@ def startProcessing(mode,fileName,saveName,row,column):
     elif mode[1] == "1":      #M1-Avg_RGB
         csvName = 'AverageRGB.csv'
         formula = avgRGB_CountDistance
-
     elif mode[1] == "2":      #M2-Avg_HSV
         csvName = 'AverageHSV.csv'
         formula = avgHSV_CountDistance
-    
     elif mode[1] == "3":      #M3-Color_Histogram
         csvName = 'ColorHistogram.csv'
         formula = colorHistogram_CountDistance
-
     elif mode[1] == "4":    #M4-Color_Layout
         csvName = 'ColorLayout.csv'
         formula = colorLayout_CountDistance
@@ -179,32 +184,31 @@ def startProcessing(mode,fileName,saveName,row,column):
         Reader = csv.reader(csvfile)
         data = [row_ for row_ in Reader]
         
-        output = Image.new('RGB',(width,height))
         blockW = width / column
         blockH = height / row
-        blockSize = (blockW, blockH)
-        blockBoundary = (0, 0, blockW, blockH)
+        output = Image.new('RGB', (blockW*column,blockH*row))
         for i in xrange(column):
             for j in xrange(row):
+                # Update block boundary
+                blockBoundary = (i*blockW, j*blockH, (i+1)*blockW, (j+1)*blockH)
+                print blockBoundary
                 imgCrop = query.crop(blockBoundary)
                 res = formula(imgCrop,data)
-                print (str(i+1) + ' x ' + str(j+1) + ' : ' + res[0] + ' , Distance = ' + str(res[1]))
-                imgNew = Image.open(imgLoc + res[0]).resize(blockSize)
+                print (str(i+1)+' x '+str(j+1)+' : '+res[0]+' , Distance = '+str(res[1]))
+                imgNew = Image.open(imgLoc + res[0]).resize((blockW, blockH))
                 output.paste(imgNew, blockBoundary)
-                # Update block boundary (blockW)
-                blockBoundary = (blockBoundary[0]+blockW, blockBoundary[1], blockBoundary[2]+blockW, blockBoundary[3])
-            
-            # Update block boundary (blockH)
-            blockBoundary = (blockBoundary[0], blockBoundary[1]+blockH, blockBoundary[2], blockBoundary[3]+blockH)
 
     output.save(saveName, "JPEG", quality=85, optimize=True, progressive=True)
 
     # Show saved photo
-#    showImg(saveName)
-    img = Image.open(saveName)
-    image = ImageTk.PhotoImage(img.resize((img.size[0]/2, img.size[1]/2),Image.ANTIALIAS))
-    app.thumb_mosaic.configure(image = image)
-    app.thumb_mosaic.image = image
+    showImg(saveName)
+# The following code makes an attempt to put result img next to the original one
+# but seems not working yet
+
+#    img = Image.open(saveName)
+#    image = ImageTk.PhotoImage(img.resize((img.size[0]/2, img.size[1]/2),Image.ANTIALIAS))
+#    app.thumb_mosaic.configure(image = image)
+#    app.thumb_mosaic.image = image
 
 if __name__ == '__main__':
     root = Tk()

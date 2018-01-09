@@ -5,6 +5,7 @@ from PIL import ImageTk, Image
 import os
 import numpy as np
 import pandas
+from scipy.fftpack import dct
 from scipy.misc import toimage
 import colorsys
 
@@ -36,9 +37,6 @@ def zigZag(list):
     return back
 
 def convert(query, mode):
-#    print(fileName + " in " + mode + " mode")
-#    path = "./dataset/img/"
-#    query = Image.open(path+fileName)
     if(query.mode!="RGB"):
         query = query.convert("RGB")
 
