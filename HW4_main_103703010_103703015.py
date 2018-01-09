@@ -98,6 +98,44 @@ def saveFile():
     saveName = tkFileDialog.asksaveasfile(initialdir = "./",filetypes=[("Image","*.jpg")],initialfile=fileName)
     app.saveName.set(saveName.name)
 
+def ColorHist_Distance(queryHist, baseHist):
+    # 當作一般的histogram處理
+    distance = [0, 0, 0]
+    for i in range(len(queryHist)):
+        sumQuery = sumBase = d = 0
+        for j in range(len(queryHist[i])):
+            if i == 1 and j > 100: # S and index > 100
+                break;
+            if i == 2 and j > 255: # V and index > 255
+                break;
+            d += min( float(queryHist[i][j]),float(baseHist[i][j]) )
+            sumQuery += float(queryHist[i][j])
+            sumBase += float(baseHist[i][j])
+        distance[i] = d/min(sumQuery, sumBase)
+#    return distance[0]
+#    return (4*distance[0]+1*distance[1]+2*distance[2])/(4+1+2)
+    return sqrt( pow(distance[0], 2) + pow(distance[1], 2) + pow(distance[2], 2) )
+
+def ColorHist_Distance2(queryHSV_avg, baseHist):
+    # 將每一個histogram依據加權平均轉換成一個代表性的hsv，再對兩個hsv tuple計算距離
+    distance = [0, 0, 0] # H, S, V
+    baseAvg = [0, 0, 0]
+    for i in range(len(baseHist)):
+        count = weighted_sum = 0
+        for j in range(len(baseHist[i])):
+            if i == 1 and j > 100: break
+            if i == 2 and j > 255: break
+            weighted_sum += j*float(baseHist[i][j])
+            count += float(baseHist[i][j])
+        baseAvg[i] = weighted_sum/count
+        if i == 1:
+            distance[i] = min(abs(queryHSV_avg[i]-baseAvg[i]),360-abs(queryHSV_avg[i]-baseAvg[i])) / 180.0
+        elif i == 2:
+            distance[i] = abs(queryHSV_avg[i]-baseAvg[i])
+        else:
+            distance[i] = abs(queryHSV_avg[i]-baseAvg[i])/255.0
+    return sqrt(pow(distance[0],2)+pow(distance[1],2)+pow(distance[2],2))
+
 ##################
 def avgRGB_CountDistance(query,base):
     qData = convert(query,"Average_RGB")
@@ -126,8 +164,20 @@ def avgHSV_CountDistance(query,base):
 def colorHistogram_CountDistance(query, base):
     # H:[0,360] / S:[0,100] / V:[0,255]
     qData = convert(query,"Color_Histogram")
+    
+    queryHSV = [0, 0, 0]
+    for i in range(len(qData)):
+        count = weighted_sum = 0
+        for j in range(len(qData[i])):
+            if i == 1 and j > 100: break
+            if i == 2 and j > 255: break
+            weighted_sum += j*float(qData[i][j])
+            count += float(qData[i][j])
+        queryHSV[i] = (weighted_sum/count if not count == 0 else 0)
+    
     minValue = ['',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
+        '''
         distance = 0
         for i in xrange(1,4):
             for j in xrange(1,len(base[0])):
@@ -141,6 +191,9 @@ def colorHistogram_CountDistance(query, base):
                     if j > 255: break
                     distance += pow( sub / 255.0 ,2)
         distance = sqrt(distance)
+        '''
+#        distance = ColorHist_Distance(qData , [base[row+i] for i in range(1,4)] )
+        distance = ColorHist_Distance2(queryHSV , [base[row+i] for i in range(1,4)] )
         if distance < minValue[1]:
             minValue = [base[row][0], distance]
     return minValue
