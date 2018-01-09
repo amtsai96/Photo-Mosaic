@@ -93,7 +93,6 @@ def convert(query, mode):
                 hsvHistogram[0][h] += 1
                 hsvHistogram[1][s] += 1
                 hsvHistogram[2][v] += 1
-
         return hsvHistogram
 
     elif mode == "Color_Layout":
