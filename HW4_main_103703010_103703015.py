@@ -22,6 +22,7 @@ global thumb_mosaic
 
 csvLoc = "./dataset/"
 imgLoc = "./dataset/img/"
+stretchHeight = False
 
 class Window(Frame):
   
@@ -36,25 +37,29 @@ class Window(Frame):
         self.pack(fill=BOTH, expand=1)
         
         # Open File
-        self.fileName = StringVar(value = "./example.jpg")
-        Button(self, text = "-- Select File --", command = openFile).grid(row=2, column=0, padx=600, pady=5, sticky=W+N+S)
-        Label(self, textvariable = self.fileName).grid(row=3, column=0, columnspan=10, padx=700, pady=5, sticky=W+N+S)
+        self.fileName = StringVar(value = imgLoc + "ukbench00000.jpg")
+        Button(self, text = "-- Select File --", command = openFile).grid(row=2, column=0, padx=570, pady=5, sticky=W+N+S)
+        Label(self, textvariable = self.fileName).grid(row=3, column=0, columnspan=10, padx=670, pady=5, sticky=W+N+S)
         # Save File
-        self.saveName = StringVar(value = "./example_Mosaic.jpg")
-        Button(self, text = "-- Save File To --", command = saveFile).grid(row=4, column=0,columnspan=10, padx=600, pady=5, sticky=W+N+S)
-        Label(self, textvariable = self.saveName).grid(row=5, column=0, columnspan=10, padx=700, pady=5, sticky=W+N+S)
+        self.saveName = StringVar(value = "./mosaic.jpg")
+        Button(self, text = "-- Save File To --", command = saveFile).grid(row=4, column=0, padx=570, pady=5, sticky=W+N+S)
+        Label(self, textvariable = self.saveName).grid(row=5, column=0, columnspan=10, padx=670, pady=5, sticky=W+N+S)
 
         img = Image.open(self.fileName.get())
-        image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
+        tmpWidth = int(img.size[0]*480.0/img.size[1])
+        if tmpWidth > 700:
+            stretchHeight = True
+            image = ImageTk.PhotoImage(img.resize((700, int(img.size[1]*700.0/img.size[0])),Image.ANTIALIAS))
+        else:
+            stretchHeight = False
+            image = ImageTk.PhotoImage(img.resize((tmpWidth, 480),Image.ANTIALIAS))
         self.thumb = Label(self)
-        self.thumb.grid(row=0, column=0, padx=20, pady=5, sticky=W)
+        self.thumb.grid(row=0, column=0, padx=15, pady=5, sticky=W)
         self.thumb.configure(image = image)
         self.thumb.image = image
 
-        img = Image.open(self.fileName.get())
-        image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
         self.thumb_mosaic = Label(self)
-        self.thumb_mosaic.grid(row=0, column=0, padx=740, pady=5, sticky=W)
+        self.thumb_mosaic.grid(row=0, column=0, padx=735, pady=5, sticky=W)
         self.thumb_mosaic.configure(image = image)
         self.thumb_mosaic.image = image
 
@@ -90,7 +95,13 @@ def openFile():
     fileName = tkFileDialog.askopenfilename(initialdir = imgLoc)
     app.fileName.set(fileName)
     img = Image.open(app.fileName.get())
-    image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
+    tmpWidth = int(img.size[0]*480.0/img.size[1])
+    if tmpWidth > 700:
+        stretchHeight = True
+        image = ImageTk.PhotoImage(img.resize((700, int(img.size[1]*700.0/img.size[0])),Image.ANTIALIAS))
+    else:
+        stretchHeight = False
+        image = ImageTk.PhotoImage(img.resize((tmpWidth, 480),Image.ANTIALIAS))
     app.thumb.configure(image = image)
     app.thumb.image = image
     app.thumb_mosaic.configure(image = image)
@@ -252,10 +263,10 @@ def startProcessing(mode,fileName,saveName,row,column):
             for j in xrange(row):
                 # Update block boundary
                 blockBoundary = (i*blockW, j*blockH, (i+1)*blockW, (j+1)*blockH)
-                print blockBoundary
+#                print blockBoundary
                 imgCrop = query.crop(blockBoundary)
                 res = formula(imgCrop,data)
-                print (str(i+1)+' x '+str(j+1)+' : '+res[0]+' , Distance = '+str(res[1]))
+                print (' '*(3-len(str(i+1)))+str(i+1)+' x '+' '*(3-len(str(j+1)))+str(j+1)+' : '+res[0]+' , Distance = '+str(res[1]))
                 imgNew = Image.open(imgLoc + res[0]).resize((blockW, blockH))
                 output.paste(imgNew, blockBoundary)
 
@@ -264,7 +275,10 @@ def startProcessing(mode,fileName,saveName,row,column):
     # Show saved photo
     # showImg(saveName)
     img = Image.open(saveName)
-    image = ImageTk.PhotoImage(img.resize((int(img.size[0]*500.0/img.size[1]), 500),Image.ANTIALIAS))
+    if stretchHeight:
+        image = ImageTk.PhotoImage(img.resize((720, int(img.size[1]*720.0/img.size[0])),Image.ANTIALIAS))
+    else:
+        image = ImageTk.PhotoImage(img.resize((int(img.size[0]*480.0/img.size[1]), 480),Image.ANTIALIAS))
     app.thumb_mosaic.configure(image = image)
     app.thumb_mosaic.image = image
 
