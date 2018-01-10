@@ -122,7 +122,7 @@ def ColorHist_Distance(queryHist, baseHist):
     for i in range(len(queryHist)):
         sumQuery = sumBase = d = 0
         for j in range(len(queryHist[i])):
-            if i == 1 and j > 100: # S and index > 100
+            if i == 1 and j > 101: # S and index > 100
                 break;
             if i == 2 and j > 255: # V and index > 255
                 break;
@@ -141,7 +141,7 @@ def ColorHist_Distance2(queryHSV_avg, baseHist):
     for i in range(len(baseHist)):
         count = weighted_sum = 0
         for j in range(len(baseHist[i])):
-            if i == 1 and j > 100: break
+            if i == 1 and j > 101: break
             if i == 2 and j > 255: break
             weighted_sum += j*float(baseHist[i][j])
             count += float(baseHist[i][j])
@@ -252,6 +252,7 @@ def startProcessing(mode,fileName,saveName,row,column):
         csvName = 'ColorLayout.csv'
         formula = colorLayout_CountDistance
 
+    print('Processing Photo Mosaic in ' + mode[3:] + ' mode...')
     with open(csvLoc + csvName, 'rb') as csvfile:
         Reader = csv.reader(csvfile)
         data = [row_ for row_ in Reader]

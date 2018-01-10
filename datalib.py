@@ -99,8 +99,8 @@ def convert(query, mode):
         width,height = query.size
         
         # Image Partition
-        ImgPartitionWidth = width / 8
-        ImgPartitionHeight = height / 8
+        ImgPartitionWidth = max(width / 8, 1)
+        ImgPartitionHeight = max(height / 8, 1)
         ImgPartitionRGB = [[[0 for j in xrange(8)] for i in xrange(8)]for k in xrange(3)]
         pixel = query.load()
         for i in xrange(width):
