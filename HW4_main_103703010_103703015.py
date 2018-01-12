@@ -79,8 +79,8 @@ class Window(Frame):
         
         # Image Partition Size
         Label(self, text="Image Partition Size = ").grid(row=7, column=0,padx=600, sticky=W)
-        self.column = StringVar(value="30")
-        self.row = StringVar(value="30")
+        self.column = StringVar(value="40")
+        self.row = StringVar(value="40")
         
         #To check if the inputs are numbers
         vcmd = (self.register(self.isValidate),
@@ -126,7 +126,7 @@ def saveFile():
 
 def avgRGB_CountDistance(query,base):
     qData = convert(query,"Average_RGB")
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         distance = 0
         for i in xrange(1,4):
@@ -138,7 +138,7 @@ def avgRGB_CountDistance(query,base):
 
 def avgRGB_CountDistance_cos(query,base):
     qData = convert(query,"Average_RGB")
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         ql = []
         bl = []
@@ -152,7 +152,7 @@ def avgRGB_CountDistance_cos(query,base):
 
 def avgHSV_CountDistance(query,base):
     qData = convert(query,"Average_HSV")
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         distance = 0
         for i in xrange(1,4):
@@ -164,7 +164,7 @@ def avgHSV_CountDistance(query,base):
 
 def avgHSV_CountDistance_cos(query,base):
     qData = convert(query,"Average_HSV")
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         ql = []
         bl = []
@@ -253,7 +253,7 @@ def colorHistogram_CountDistance(query, base):
             count += float(qData[i][j])
         queryHSV[i] = (weighted_sum/count if not count == 0 else 0)
     
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
 #        distance = ColorHist_Distance(qData , [base[row+i] for i in range(1,4)] )
         distance = ColorHist_Distance2(queryHSV , [base[row+i] for i in range(1,4)] )
@@ -274,7 +274,7 @@ def colorHistogram_CountDistance_cos(query, base):
             count += float(qData[i][j])
         queryHSV[i] = (weighted_sum/count if not count == 0 else 0)
 
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         distance = ColorHist_Distance2_cos(queryHSV , [base[row+i] for i in range(1,4)] )
         if distance < minValue[1]:
@@ -284,7 +284,7 @@ def colorHistogram_CountDistance_cos(query, base):
 def colorLayout_CountDistance(query, base):
     # 8*8 = 64 blocks
     qData = convert(query,"Color_Layout")
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         distance = 0
         for i in xrange(1,4):
@@ -299,7 +299,7 @@ def colorLayout_CountDistance(query, base):
 def colorLayout_CountDistance_cos(query, base):
     # 8*8 = 64 blocks
     qData = convert(query,"Color_Layout")
-    minValue = ['',float("inf")] #fileName,distance
+    minValue = ['ukbench00000.jpg',float("inf")] #fileName,distance
     for row in xrange(0,len(base),4):
         bl=[]
         ql=[]
